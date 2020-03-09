@@ -13,24 +13,51 @@ function UserDAO(db) {
     }
 
     var usersCol = db.collection("users");
-
     this.addUser = function(userName, firstName, lastName, password, email, callback) {
-
+      // Generate password hash
+        var salt = bcrypt.genSaltSync();
+        var passwordHash = bcrypt.hashSync(password, salt);
         // Create user document
         var user = {
             userName: userName,
             firstName: firstName,
             lastName: lastName,
             benefitStartDate: this.getRandomFutureDate(),
-            password: password //received from request param
+            password: passwordHash //received from request param
             /*
             // Fix for A2-1 - Broken Auth
              Stores password  in a safer way using one way encryption and salt hashing
              */
-            password: bcrypt.hashSync(password, bcrypt.genSaltSync())
 
         };
+        if (bcrypt.compareSync(password, user.password)) {
+          callback(null, user);
+        } else {
+          callback(invalidPasswordError, null);
+        }
+        // Enable session management using express middleware
+        app.use(express.cookieParser());
+        app.use(express.session({
+          secret: "s3Cur3",
+          cookie: {
+            httpOnly: true,
+            secure: true
+          }
+        }));
+        req.session.destroy(function() {
+          res.redirect("/");
+        });
+        req.session.regenerate(function() {
 
+          req.session.userId = user._id;
+
+          if (user.isAdmin) {
+            return res.redirect("/benefits");
+          } else {
+            return res.redirect("/dashboard");
+          }
+
+        })
         // Add email if set
         if (email !== "") {
             user.email = email;
@@ -73,7 +100,7 @@ function UserDAO(db) {
              compares decrypted password stored in this.addUser()
              */
             return bcrypt.compareSync(fromDB, fromUser);
-            
+
         }
 
         // Callback to pass to MongoDB that validates a user document
