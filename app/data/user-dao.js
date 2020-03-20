@@ -35,29 +35,6 @@ function UserDAO(db) {
         } else {
           callback(invalidPasswordError, null);
         }
-        // Enable session management using express middleware
-        app.use(express.cookieParser());
-        app.use(express.session({
-          secret: "s3Cur3",
-          cookie: {
-            httpOnly: true,
-            secure: true
-          }
-        }));
-        req.session.destroy(function() {
-          res.redirect("/");
-        });
-        req.session.regenerate(function() {
-
-          req.session.userId = user._id;
-
-          if (user.isAdmin) {
-            return res.redirect("/benefits");
-          } else {
-            return res.redirect("/dashboard");
-          }
-
-        })
         // Add email if set
         if (email !== "") {
             user.email = email;
